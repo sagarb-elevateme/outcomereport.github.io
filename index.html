@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
 /* ============ TOKENS ============ */
 :root{
@@ -310,59 +309,6 @@ footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
   </div>
 </section>
 
-<section class="tight">
-  <div class="wrap">
-    <div class="sec-head">
-      <h2>Session volume by track</h2>
-      <div class="note">Total Fastrack, Fundamental, AI Practice, and Group Coaching sessions delivered per track.</div>
-    </div>
-    <div class="panel reveal">
-      <div class="chart-holder" style="height:340px;"><canvas id="sessionsChart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<section class="tight">
-  <div class="wrap">
-    <div class="sec-head">
-      <h2>Compensation &amp; speed to offer</h2>
-      <div class="note" id="salaryKpiNote">Updates with the track filter above.</div>
-    </div>
-    <div class="kpi-grid" id="salaryKpiGrid"></div>
-  </div>
-</section>
-
-<section class="tight">
-  <div class="wrap">
-    <div class="sec-head">
-      <h2>Which profiles convert fastest</h2>
-      <div class="note">All tracks, side by side — independent of the filter above.</div>
-    </div>
-    <div class="grid-2">
-      <div class="panel reveal">
-        <h3>Job offers by profile</h3>
-        <p class="desc">Sorted low to high, so the strongest-converting track sits at the bottom.</p>
-        <div class="chart-holder"><canvas id="offersChart"></canvas></div>
-      </div>
-      <div class="panel reveal">
-        <h3>Time to offer, by profile</h3>
-        <p class="desc">Days to first opportunity vs. days to a signed offer, fastest track first.</p>
-        <div class="chart-holder"><canvas id="timeChart"></canvas></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="tight">
-  <div class="wrap">
-    <div class="panel reveal">
-      <h3>Preparation pays off</h3>
-      <p class="desc">Each bubble is a track: more weekly prep hours (right) tends to mean a faster offer (down). Bubble size is average salary offered.</p>
-      <div class="chart-holder" style="height:320px;"><canvas id="prepChart"></canvas></div>
-    </div>
-  </div>
-</section>
-
 <footer>
   <div class="wrap">
     <span>ElevateMe — internal outcome report</span>
@@ -383,9 +329,7 @@ const CONFIG = {
   tabs: {
     overview: 'Overview',
     monthly: 'MonthlyActive',
-    category: 'CategoryBreakdown',
-    sessionsByCategory: 'SessionsByCategory',
-    salaryTime: 'SalaryAndTiming'
+    category: 'CategoryBreakdown'
   }
 };
 
@@ -409,26 +353,11 @@ const DEMO = {
     {category:'Data Science', enrolled:142, completed:98, prep:112, r1:76, r2:41, final:24, placed:19},
     {category:'Data Engineer', enrolled:96, completed:70, prep:81, r1:52, r2:29, final:18, placed:14},
     {category:'Software Engineer', enrolled:134, completed:94, prep:103, r1:69, r2:37, final:22, placed:17},
-    {category:'AI', enrolled:78, completed:61, prep:68, r1:49, r2:30, final:19, placed:14},
     {category:'Other', enrolled:56, completed:38, prep:41, r1:24, r2:12, final:7, placed:5}
-  ],
-  salaryTime: [
-    {category:'Data Science', avgSalary:95000, maxSalary:145000, avgTimeToOpportunityDays:21, avgTimeToOfferDays:54, avgPrepHours:12, offers:26},
-    {category:'Data Engineer', avgSalary:102000, maxSalary:150000, avgTimeToOpportunityDays:18, avgTimeToOfferDays:47, avgPrepHours:14, offers:19},
-    {category:'Software Engineer', avgSalary:108000, maxSalary:165000, avgTimeToOpportunityDays:15, avgTimeToOfferDays:42, avgPrepHours:15, offers:23},
-    {category:'AI', avgSalary:118000, maxSalary:175000, avgTimeToOpportunityDays:12, avgTimeToOfferDays:38, avgPrepHours:17, offers:14},
-    {category:'Other', avgSalary:78000, maxSalary:110000, avgTimeToOpportunityDays:30, avgTimeToOfferDays:68, avgPrepHours:8, offers:7}
-  ],
-  sessionsByCategory: [
-    {category:'Data Science', fastrack:44, fundamental:38, aiPractice:52, groupCoaching:21},
-    {category:'Data Engineer', fastrack:31, fundamental:29, aiPractice:34, groupCoaching:14},
-    {category:'Software Engineer', fastrack:40, fundamental:33, aiPractice:41, groupCoaching:18},
-    {category:'AI', fastrack:29, fundamental:18, aiPractice:47, groupCoaching:11},
-    {category:'Other', fastrack:12, fundamental:16, aiPractice:15, groupCoaching:9}
   ]
 };
 
-let STATE = { overview:null, monthly:null, category:null, sessionsByCategory:null, salaryTime:null, activeFilter:'All', usedFallback:false };
+let STATE = { overview:null, monthly:null, category:null, activeFilter:'All', usedFallback:false };
 let charts = {};
 
 /* ---------- fetching ---------- */
@@ -477,52 +406,24 @@ function toCategory(rows){
   })).filter(r=>r.category);
 }
 
-function toSessionsByCategory(rows){
-  return rows.map(r=>({
-    category: r.Category ?? r.category,
-    fastrack: Number(r.Fastrack ?? r.fastrack ?? 0),
-    fundamental: Number(r.Fundamental ?? r.fundamental ?? 0),
-    aiPractice: Number(r.AIPractice ?? r.aiPractice ?? 0),
-    groupCoaching: Number(r.GroupCoaching ?? r.groupCoaching ?? 0)
-  })).filter(r=>r.category);
-}
-
-function toSalaryTime(rows){
-  return rows.map(r=>({
-    category: r.Category ?? r.category,
-    avgSalary: Number(r.AvgSalary ?? r.avgSalary ?? 0),
-    maxSalary: Number(r.MaxSalary ?? r.maxSalary ?? 0),
-    avgTimeToOpportunityDays: Number(r.AvgTimeToOpportunityDays ?? r.avgTimeToOpportunityDays ?? 0),
-    avgTimeToOfferDays: Number(r.AvgTimeToOfferDays ?? r.avgTimeToOfferDays ?? 0),
-    avgPrepHours: Number(r.AvgPrepHoursPerWeek ?? r.avgPrepHours ?? 0),
-    offers: Number(r.Offers ?? r.offers ?? 0)
-  })).filter(r=>r.category);
-}
-
 async function loadData(){
   document.getElementById('syncLabel').textContent = 'connecting to sheet…';
   try{
     if(!CONFIG.sheetId || CONFIG.sheetId === 'YOUR_GOOGLE_SHEET_ID_HERE') throw new Error('no sheet id set');
-    const [ovRows, moRows, catRows, sessRows, salRows] = await Promise.all([
+    const [ovRows, moRows, catRows] = await Promise.all([
       fetchTabCsv(CONFIG.tabs.overview),
       fetchTabCsv(CONFIG.tabs.monthly),
-      fetchTabCsv(CONFIG.tabs.category),
-      fetchTabCsv(CONFIG.tabs.sessionsByCategory),
-      fetchTabCsv(CONFIG.tabs.salaryTime)
+      fetchTabCsv(CONFIG.tabs.category)
     ]);
     STATE.overview = toOverviewMap(ovRows);
     STATE.monthly = toMonthly(moRows);
     STATE.category = toCategory(catRows);
-    STATE.sessionsByCategory = toSessionsByCategory(sessRows);
-    STATE.salaryTime = toSalaryTime(salRows);
     STATE.usedFallback = false;
   }catch(err){
     console.warn('Falling back to demo data:', err.message);
     STATE.overview = DEMO.overview;
     STATE.monthly = DEMO.monthly;
     STATE.category = DEMO.category;
-    STATE.sessionsByCategory = DEMO.sessionsByCategory;
-    STATE.salaryTime = DEMO.salaryTime;
     STATE.usedFallback = true;
   }
   document.getElementById('fallbackBanner').classList.toggle('show', STATE.usedFallback);
@@ -562,7 +463,6 @@ function renderFilters(){
       renderFilters();
       renderJourney();
       renderCategoryTable();
-      renderSalaryKpis();
       document.getElementById('journeyTitle').textContent = 'The student journey — ' + STATE.activeFilter + (STATE.activeFilter==='All'?' tracks':'');
     });
   });
@@ -601,22 +501,6 @@ function currentJourneyData(){
     return sum;
   }
   return STATE.category.find(c=>c.category===STATE.activeFilter) || STATE.category[0];
-}
-
-function currentSalaryTimeData(){
-  if(STATE.activeFilter==='All'){
-    const totalOffers = STATE.salaryTime.reduce((s,c)=>s+c.offers,0) || 1;
-    const wAvg = (key) => STATE.salaryTime.reduce((s,c)=>s+c[key]*c.offers,0) / totalOffers;
-    return {
-      avgSalary: Math.round(wAvg('avgSalary')),
-      maxSalary: Math.max(...STATE.salaryTime.map(c=>c.maxSalary)),
-      avgTimeToOpportunityDays: Math.round(wAvg('avgTimeToOpportunityDays')),
-      avgTimeToOfferDays: Math.round(wAvg('avgTimeToOfferDays')),
-      avgPrepHours: Math.round(STATE.salaryTime.reduce((s,c)=>s+c.avgPrepHours,0)/STATE.salaryTime.length),
-      offers: totalOffers
-    };
-  }
-  return STATE.salaryTime.find(c=>c.category===STATE.activeFilter) || STATE.salaryTime[0];
 }
 
 function renderJourney(){
@@ -690,145 +574,7 @@ function renderCategoryTable(){
   }).join('');
 }
 
-function renderSessionsChart(){
-  const ctx = document.getElementById('sessionsChart');
-  if(charts.sessions) charts.sessions.destroy();
-  const cats = STATE.sessionsByCategory;
-  charts.sessions = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels: cats.map(c=>c.category),
-      datasets:[
-        {label:'Fastrack', data: cats.map(c=>c.fastrack), backgroundColor:'#2f9e8c', borderRadius:4},
-        {label:'Fundamental', data: cats.map(c=>c.fundamental), backgroundColor:'#5b8fd6', borderRadius:4},
-        {label:'AI Practice', data: cats.map(c=>c.aiPractice), backgroundColor:'#d4a24c', borderRadius:4},
-        {label:'Group Coaching', data: cats.map(c=>c.groupCoaching), backgroundColor:'#c1503a', borderRadius:4}
-      ]
-    },
-    options:{
-      plugins:{
-        legend:{position:'top', align:'end', labels:{boxWidth:10, font:{size:11}}},
-        datalabels:{ display:(ctx)=> ctx.dataset.data[ctx.dataIndex] > 0, color:'#12151a', font:{family:'IBM Plex Mono', size:10, weight:600} }
-      },
-      scales:{
-        x:{stacked:true, grid:{display:false}},
-        y:{stacked:true, grid:{color:'rgba(244,241,234,0.06)'}, beginAtZero:true}
-      }
-    }
-  });
-}
-
-function renderSalaryKpis(){
-  const d = currentSalaryTimeData();
-  const items = [
-    {label:'Average salary offered', value:'$'+d.avgSalary.toLocaleString(), accent:'teal'},
-    {label:'Maximum salary offered', value:'$'+d.maxSalary.toLocaleString(), accent:'gold'},
-    {label:'Avg. time to first opportunity', value:d.avgTimeToOpportunityDays+' days', accent:''},
-    {label:'Avg. time to offer', value:d.avgTimeToOfferDays+' days', accent:'red'},
-    {label:'Weekly prep hours needed', value:d.avgPrepHours+' hrs/wk', accent:''}
-  ];
-  document.getElementById('salaryKpiGrid').innerHTML = items.map(it=>`
-    <div class="kpi reveal ${it.accent?'accent-'+it.accent:''}">
-      <div class="label">${it.label}</div>
-      <div class="value mono">${it.value}</div>
-    </div>
-  `).join('');
-  document.getElementById('salaryKpiNote').textContent =
-    STATE.activeFilter==='All' ? 'Weighted across all tracks and every offer received.' : 'Showing ' + STATE.activeFilter + ' only — pick a different pill above to compare.';
-  observeReveal();
-}
-
-function renderOffersChart(){
-  const ctx = document.getElementById('offersChart');
-  if(charts.offers) charts.offers.destroy();
-  const sorted = [...STATE.salaryTime].sort((a,b)=>a.offers-b.offers);
-  charts.offers = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels: sorted.map(c=>c.category),
-      datasets:[{
-        data: sorted.map(c=>c.offers),
-        backgroundColor:'#2f9e8c', borderRadius:6, barThickness:22
-      }]
-    },
-    options:{
-      indexAxis:'y',
-      plugins:{
-        legend:{display:false},
-        datalabels:{ display:true, color:'#f4f1ea', anchor:'end', align:'right', font:{family:'IBM Plex Mono', size:11, weight:600},
-          formatter:(v)=> v+' offers' }
-      },
-      scales:{
-        x:{grid:{color:'rgba(244,241,234,0.06)'}, beginAtZero:true, suggestedMax: Math.max(...sorted.map(c=>c.offers))*1.25},
-        y:{grid:{display:false}}
-      }
-    }
-  });
-}
-
-function renderTimeChart(){
-  const ctx = document.getElementById('timeChart');
-  if(charts.time) charts.time.destroy();
-  const sorted = [...STATE.salaryTime].sort((a,b)=>a.avgTimeToOfferDays-b.avgTimeToOfferDays);
-  charts.time = new Chart(ctx, {
-    type:'bar',
-    data:{
-      labels: sorted.map(c=>c.category),
-      datasets:[
-        {label:'Days to first opportunity', data: sorted.map(c=>c.avgTimeToOpportunityDays), backgroundColor:'#d4a24c', borderRadius:6, barThickness:14},
-        {label:'Days to offer', data: sorted.map(c=>c.avgTimeToOfferDays), backgroundColor:'#c1503a', borderRadius:6, barThickness:14}
-      ]
-    },
-    options:{
-      indexAxis:'y',
-      plugins:{
-        legend:{position:'top', align:'end', labels:{boxWidth:10, font:{size:11}}},
-        datalabels:{ display:true, color:'#f4f1ea', anchor:'end', align:'right', font:{family:'IBM Plex Mono', size:10, weight:600},
-          formatter:(v)=> v+'d' }
-      },
-      scales:{
-        x:{grid:{color:'rgba(244,241,234,0.06)'}, beginAtZero:true},
-        y:{grid:{display:false}}
-      }
-    }
-  });
-}
-
-function renderPrepChart(){
-  const ctx = document.getElementById('prepChart');
-  if(charts.prep) charts.prep.destroy();
-  const cats = STATE.salaryTime;
-  const maxSalary = Math.max(...cats.map(c=>c.avgSalary));
-  const colors = ['#2f9e8c','#c1503a','#d4a24c','#5b8fd6','#a888c9'];
-  charts.prep = new Chart(ctx, {
-    type:'bubble',
-    data:{
-      datasets:[{
-        data: cats.map((c,i)=>({x:c.avgPrepHours, y:c.avgTimeToOfferDays, r: 10 + 22*(c.avgSalary/maxSalary)})),
-        backgroundColor: cats.map((c,i)=>colors[i%colors.length]+'cc')
-      }]
-    },
-    options:{
-      plugins:{
-        legend:{display:false},
-        datalabels:{ display:true, color:'#f4f1ea', font:{family:'IBM Plex Mono', size:11, weight:600},
-          formatter:(v,ctx)=> cats[ctx.dataIndex].category },
-        tooltip:{ callbacks:{ label:(ctx)=>{
-          const c = cats[ctx.dataIndex];
-          return `${c.category}: ${c.avgPrepHours} hrs/wk prep → ${c.avgTimeToOfferDays}d to offer, $${c.avgSalary.toLocaleString()} avg salary`;
-        }}}
-      },
-      scales:{
-        x:{ title:{display:true, text:'Avg. weekly prep hours', color:'#a19c92'}, grid:{color:'rgba(244,241,234,0.06)'} },
-        y:{ title:{display:true, text:'Avg. days to offer', color:'#a19c92'}, grid:{color:'rgba(244,241,234,0.06)'}, reverse:false }
-      }
-    }
-  });
-}
-
 function chartDefaults(){
-  Chart.register(ChartDataLabels);
-  Chart.defaults.set('plugins.datalabels', { display:false });
   Chart.defaults.color = '#a19c92';
   Chart.defaults.font.family = "Inter, sans-serif";
   Chart.defaults.borderColor = 'rgba(244,241,234,0.08)';
@@ -940,11 +686,6 @@ function renderAll(){
   renderJourney();
   renderCategoryTable();
   chartDefaults();
-  renderSalaryKpis();
-  renderOffersChart();
-  renderTimeChart();
-  renderPrepChart();
-  renderSessionsChart();
   renderMonthlyChart();
   renderProgramChart();
   renderCompareChart();
